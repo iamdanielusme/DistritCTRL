@@ -1,4 +1,4 @@
-// main.c - Distrit CTRL01: botón (nota) + pot (CC) en MIDI USB
+// main.c - Distrit CTRL01: botón (nota) + pot (CC7) + fader (CC10) en MIDI USB
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,15 +11,21 @@
 
 // ---------------- Configuración de pines ----------------
 
-#define BTN_PIN         2      // Botón en GP2
-#define POT_ADC_GPIO    26     // Pot en GP26 (ADC0)
-#define POT_ADC_INPUT   0      // ADC0
+#define BTN_PIN          2      // Botón en GP2
+
+#define POT_ADC_GPIO     26     // Pot en GP26 (ADC0)
+#define POT_ADC_INPUT    0      // Canal ADC0
+
+#define FADER_ADC_GPIO   27     // Fader en GP27 (ADC1)
+#define FADER_ADC_INPUT  1      // Canal ADC1
 
 // ---------------- Configuración MIDI ----------------
 
-#define MIDI_CHANNEL    0      // Canal 1 (0 = ch1, 1 = ch2, etc)
-#define MIDI_NOTE       60     // Nota C4 para el botón
-#define MIDI_CC_NUM     7      // CC7 = volumen
+#define MIDI_CHANNEL     0      // Canal 1 (0 = ch1, 1 = ch2, etc.)
+#define MIDI_NOTE        60     // Nota C4 para el botón
+
+#define MIDI_CC_POT      7      // CC7 (volumen, por ejemplo) para el pot
+#define MIDI_CC_FADER    10     // CC10 (pan, por ejemplo) para el fader
 
 // ---------------- Blink según estado USB --------------
 
@@ -35,6 +41,7 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 static void led_blinking_task(void);
 static void button_midi_task(void);
 static void pot_midi_task(void);
+static void fader_midi_task(void);
 
 // ---------------------- main --------------------------
 
@@ -49,9 +56,10 @@ int main(void)
     gpio_set_dir(BTN_PIN, GPIO_IN);
     gpio_pull_up(BTN_PIN);
 
-    // Potenciómetro: ADC en GP26 (ADC0)
+    // ADC para pot y fader
     adc_init();
-    adc_gpio_init(POT_ADC_GPIO);
+    adc_gpio_init(POT_ADC_GPIO);     // GP26 -> ADC0
+    adc_gpio_init(FADER_ADC_GPIO);   // GP27 -> ADC1
 
     // Inicializar USB dispositivo (TinyUSB)
     tud_init(BOARD_TUD_RHPORT);
@@ -63,9 +71,10 @@ int main(void)
         // LED según estado USB
         led_blinking_task();
 
-        // MIDI desde botón y potenciómetro
+        // MIDI desde botón, pot y fader
         button_midi_task();
         pot_midi_task();
+        fader_midi_task();
     }
 
     return 0;
@@ -156,7 +165,7 @@ static void pot_midi_task(void)
 
     uint32_t now = board_millis();
 
-    // Limitar frecuencia de lectura (por ejemplo, cada 10 ms)
+    // Leer pot cada ~10 ms
     if (now - last_ms < 10) {
         return;
     }
@@ -173,16 +182,57 @@ static void pot_midi_task(void)
     // Escalar a 0..127
     uint8_t cc = (uint8_t)((raw * 127) / 4095);
 
-    // Si es la primera vez, inicializamos last_cc
     if (last_cc == 255) {
         last_cc = cc;
     }
 
-    // Enviar solo si cambia lo suficiente (filtro simple)
+    // Enviar solo si cambia (para no spamear)
     if (abs((int)cc - (int)last_cc) >= 1) {
         uint8_t msg[3];
-        msg[0] = 0xB0 | (MIDI_CHANNEL & 0x0F);  // CC en canal
-        msg[1] = MIDI_CC_NUM;                  // número de CC
+        msg[0] = 0xB0 | (MIDI_CHANNEL & 0x0F);  // CC en canal 1
+        msg[1] = MIDI_CC_POT;                  // número de CC (7)
+        msg[2] = cc;                           // valor 0..127
+
+        tud_midi_stream_write(0, msg, 3);
+        last_cc = cc;
+    }
+}
+
+// --------------- Fader → Control Change MIDI ----------
+
+static void fader_midi_task(void)
+{
+    static uint8_t last_cc = 255;
+    static uint32_t last_ms = 0;
+
+    uint32_t now = board_millis();
+
+    // Leer fader cada ~10 ms
+    if (now - last_ms < 10) {
+        return;
+    }
+    last_ms = now;
+
+    if (!tud_midi_mounted()) {
+        return;
+    }
+
+    // Seleccionar ADC1 (GP27) y leer
+    adc_select_input(FADER_ADC_INPUT);
+    uint16_t raw = adc_read();   // 0..4095
+
+    // Escalar a 0..127
+    uint8_t cc = (uint8_t)((raw * 127) / 4095);
+
+    if (last_cc == 255) {
+        last_cc = cc;
+    }
+
+    // Enviar solo si cambia
+    if (abs((int)cc - (int)last_cc) >= 1) {
+        uint8_t msg[3];
+        msg[0] = 0xB0 | (MIDI_CHANNEL & 0x0F);  // CC en canal 1
+        msg[1] = MIDI_CC_FADER;                // número de CC (10)
         msg[2] = cc;                           // valor 0..127
 
         tud_midi_stream_write(0, msg, 3);
