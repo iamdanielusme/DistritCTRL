@@ -1,4 +1,4 @@
-# DistritCTRL
+ # DistritCTRL
 Este repositorio esta hecho para llevar seguimiento al proyecto diseñado para el curso Electrónica Digital III
 
 El proyecto final del curso de Electrónica Digital III consiste en desarrollar una aplicación o sistema embebido que utilice el MCU del curso y que involucre el uso de sensores, actuadores, Interfaz Humano Máquina, módulos de comunicación, etc. Los estudiantes deberán conformar grupos de trabajo para la realización del proyecto. Si bien no se establece un máximo de estudiantes, la complejidad del proyecto y el número de integrantes del grupo debe ser coherente. Cada grupo definirá los requisitos y características de la aplicación o sistema que diseñará. Este cuestionario recoge información básica necesaria para comprender la propuesta inicial de trabajo que cada grupo quiere realizar.
