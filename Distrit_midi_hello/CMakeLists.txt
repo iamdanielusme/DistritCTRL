@@ -48,6 +48,7 @@ if (TARGET tinyusb_device)
         pico_stdlib
         tinyusb_device
         tinyusb_board
+        hardware_adc
     )
 
     # No necesitamos stdio por USB/UART en este proyecto
