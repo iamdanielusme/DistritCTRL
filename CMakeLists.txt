@@ -28,31 +28,30 @@ set(PICO_BOARD pico CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(main C CXX ASM)
+project(potenciometro C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(main main.c button_driver.c fader_driver.c midi_uart.c input.c)
+add_executable(potenciometro potenciometro.c )
 
-pico_set_program_name(main "main")
-pico_set_program_version(main "0.1")
+pico_set_program_name(potenciometro "potenciometro")
+pico_set_program_version(potenciometro "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(main 1)
-pico_enable_stdio_usb(main 1)
+pico_enable_stdio_uart(potenciometro 0)
+pico_enable_stdio_usb(potenciometro 0)
 
 # Add the standard library to the build
-target_link_libraries(main
-        pico_stdlib
-        hardware_adc)
+target_link_libraries(potenciometro
+        pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(main PRIVATE
+target_include_directories(potenciometro PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
-pico_add_extra_outputs(main)
+pico_add_extra_outputs(potenciometro)
 

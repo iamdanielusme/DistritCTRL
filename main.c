@@ -1,16 +1,14 @@
 #include "pico/stdlib.h"
-#include "input.h"
+#include "pot_driver.h"
 
 int main() {
-    stdio_init_all();
 
-    Button btn;
-    Fader  fad;
+    pot_init(26);   // GP26 = ADC0
+    pot_set_cc(7); // Ej: CC74 (filtro), opcional
 
-    input_init(&btn, &fad);
-
-    while (true) {
-        input_task(&btn, &fad);
-        sleep_ms(5);
+    while (1) {
+        pot_update();
+        sleep_ms(10);
     }
+    return 0;
 }
