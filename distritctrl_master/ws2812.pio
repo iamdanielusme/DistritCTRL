@@ -1,0 +1,39 @@
+.program ws2812
+.side_set 1
+
+; Pequeño driver PIO para WS2812 (800 kHz aprox)
+
+.define public T0H  2
+.define public T1H  5
+.define public T_TOT 7
+
+.wrap_target
+bitloop:
+    out x, 1            side 0        [T_TOT - 1]
+    jmp !x do_zero      side 1        [T0H   - 1]
+    jmp bitloop         side 1        [T1H   - 1]
+do_zero:
+    jmp bitloop         side 0        [T1H   - 1]
+.wrap
+
+% c-sdk {
+#include "hardware/pio.h"
+#include "hardware/clocks.h"
+
+// Inicialización cómoda desde C
+static inline void ws2812_program_init(PIO pio, uint sm, uint offset,
+                                       uint pin, float freq, bool rgbw) {
+    pio_sm_config c = ws2812_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_out_shift(&c, false, true, rgbw ? 32 : 24);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+    float div = (float)clock_get_hz(clk_sys) / freq;
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

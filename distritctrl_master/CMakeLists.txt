@@ -33,23 +33,32 @@ project(distritctrl_master C CXX ASM)
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
+
 if (TARGET tinyusb_device)
     add_executable(distritctrl_master
         main.c
         usb_descriptors.c
         midi_core.c
+        display_oled.c
+        sh1106.c
+        led_ring.c
+        step_sequencer.c
+        
     )
-
+    
     # Para que encuentre tusb_config.h y headers locales
     target_include_directories(distritctrl_master PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}
     )
-
+    #pico_generate_pio_header(distritctrl_master ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio)
     target_link_libraries(distritctrl_master
         pico_stdlib
         tinyusb_device
         tinyusb_board
         hardware_adc
+        hardware_i2c
+        hardware_pio
+        hardware_clocks 
     )
 
     # No necesitamos stdio por USB/UART en este proyecto

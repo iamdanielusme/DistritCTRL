@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+
 /**
  * Inicializa la pila USB MIDI (TinyUSB) para el RP2040.
  * Debes llamar a board_init() antes en main().
@@ -24,6 +25,7 @@ void midi_core_task(void);
  */
 bool midi_core_is_mounted(void);
 
+uint16_t midi_core_get_bpm(void); 
 /**
  * Envia un mensaje Note On por MIDI.
  * channel: 0–15 (0 = canal 1)

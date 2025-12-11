@@ -1,78 +1,68 @@
-// main.c - MASTER Distrit CTRL01
-// Solo 1 botón físico (PLAY) -> Nota MIDI hacia Ableton
-
-#include <stdbool.h>
-#include <stdint.h>
-
 #include "pico/stdlib.h"
-#include "bsp/board.h"
+#include "hardware/timer.h"
 
 #include "midi_core.h"
+#include "led_ring.h"
+#include "step_sequencer.h"
+#include "display_oled.h"
 
-// ---------------- Configuración de pines y MIDI ----------------
+// Estado que le pasamos a la OLED
+static controller_status_t ui_status;
 
-#define BTN_PLAY_PIN     2      // Botón físico en GP2
+// Timer para refrescar SOLO la UI (OLED)
+static bool ui_timer_cb(repeating_timer_t *t)
+{
+    // --- Leer estado lógico desde los módulos ---
 
-#define MIDI_CHANNEL     0      // Canal 1 (0 = ch1)
-#define MIDI_NOTE_PLAY   60     // Nota que mapearemos a PLAY en Ableton (C4)
+    // BPM actual calculado en midi_core a partir del clock MIDI
+    ui_status.bpm = midi_core_get_bpm();
 
-// Prototipo de la tarea de botón
-static void button_play_task(void);
+    // Usamos el BPM como “proxy” de si hay clock.
+    // Si tu midi_core pone 0 cuando no hay clock, esto funciona bien.
+    ui_status.has_clock = (ui_status.bpm > 0);
 
-// ---------------------------- main -----------------------------
+    // ¿El step sequencer está corriendo?
+    ui_status.playing = stepseq_is_running();
+
+    // Paso actual (stepseq_get_current_step devuelve 0..15)
+    uint8_t cur_step = stepseq_get_current_step();
+    ui_status.step        = (uint8_t)(cur_step + 1); // 1..16 para la pantalla
+    ui_status.total_steps = 16;
+
+    // Actualizar lo que la OLED debe mostrar
+    display_set_status(&ui_status);
+    display_task();   // redibuja el frame en el SH1106
+
+    return true; // seguir repitiendo el timer
+}
 
 int main(void)
 {
-    // Inicializa hardware base de la placa
-    board_init();
-    stdio_init_all();
+    stdio_init_all();   // Opcional, por si quieres debug por USB CDC
 
-    // Configurar botón PLAY: entrada con pull-up en GP2
-    gpio_init(BTN_PLAY_PIN);
-    gpio_set_dir(BTN_PLAY_PIN, GPIO_IN);
-    gpio_pull_up(BTN_PLAY_PIN);
+    // --- Inicializar hardware propio ---
 
-    // Inicializar USB MIDI (TinyUSB) vía módulo midi_core
+    led_ring_init();    // WS2812 (usa PIO)
+    stepseq_init();     // Estado del step sequencer
+    display_init();     // I2C + SH1106 (OLED)
+
+    // Inicializar MIDI + TinyUSB
     midi_core_init();
 
-    while (1) {
-        // MIDI USB (enumeración, transfers, LED de estado)
+    // --- Timer periódico para la OLED (solo UI, nada de USB aquí) ---
+    struct repeating_timer ui_timer;
+    // Cada ~33 ms ≈ 30 FPS de refresco de display
+    add_repeating_timer_ms(-33, ui_timer_cb, NULL, &ui_timer);
+
+    // --- Bucle principal: aquí se atiende USB/MIDI de forma continua ---
+
+    while (true) {
+        // Procesar USB + MIDI (dentro de esta función deberías estar llamando
+        // tud_task() y manejando los mensajes MIDI IN/OUT)
         midi_core_task();
 
-        // Lógica del botón de PLAY
-        button_play_task();
-
-        // Más adelante aquí añadiremos:
-        // - app_master_task()
-        // - recepción por UART desde el SLAVE
-        // - actualización de OLED y anillo de LEDs
+        tight_loop_contents();  // pista al compilador de que este bucle es intencional
     }
 
     return 0;
-}
-
-// ----------------------- Botón PLAY ----------------------------
-
-static void button_play_task(void)
-{
-    static bool btn_prev = true;  // por pull-up, "sin oprimir" = 1
-    bool btn_now = gpio_get(BTN_PLAY_PIN);
-
-    // Si aún no estamos montados como dispositivo MIDI, no mandamos nada
-    if (!midi_core_is_mounted()) {
-        btn_prev = btn_now;
-        return;
-    }
-
-    // Flanco 1 -> 0: botón oprimido (Note On)
-    if (btn_prev && !btn_now) {
-        midi_send_note_on(MIDI_CHANNEL, MIDI_NOTE_PLAY, 100);
-    }
-
-    // Flanco 0 -> 1: botón liberado (Note Off)
-    if (!btn_prev && btn_now) {
-        midi_send_note_off(MIDI_CHANNEL, MIDI_NOTE_PLAY, 0);
-    }
-
-    btn_prev = btn_now;
 }
