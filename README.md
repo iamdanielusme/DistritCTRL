@@ -1,24 +1,46 @@
- # DistritCTRL
-Este repositorio esta hecho para llevar seguimiento al proyecto diseñado para el curso Electrónica Digital III
+# Distrit CTRL01 – Controlador MIDI híbrido (Proyecto Electrónica Digital III)
 
-El proyecto final del curso de Electrónica Digital III consiste en desarrollar una aplicación o sistema embebido que utilice el MCU del curso y que involucre el uso de sensores, actuadores, Interfaz Humano Máquina, módulos de comunicación, etc. Los estudiantes deberán conformar grupos de trabajo para la realización del proyecto. Si bien no se establece un máximo de estudiantes, la complejidad del proyecto y el número de integrantes del grupo debe ser coherente. Cada grupo definirá los requisitos y características de la aplicación o sistema que diseñará. Este cuestionario recoge información básica necesaria para comprender la propuesta inicial de trabajo que cada grupo quiere realizar.
+Este repositorio está hecho para llevar el seguimiento del proyecto diseñado para el curso **Electrónica Digital III** de la Universidad de Antioquia.
 
-1.	Por favor ingrese un nombre para su proyecto. El nombre debe ser un nombre corto como el que tendría un producto comercial. No utilice nombres largos que parezcan el título de una tesis. 
-Distrit CTRL01
+El proyecto final del curso consiste en desarrollar una aplicación o sistema embebido que utilice el MCU visto en clase e integre **sensores, actuadores, interfaz humano–máquina y módulos de comunicación**. En nuestro caso, el equipo propuso como proyecto **Distrit CTRL01**, un controlador MIDI híbrido orientado a performance musical en vivo.
 
-2.	Describa de la forma detallada la idea inicial de proyecto final de su equipo de trabajo.
-La idea de nuestro proyecto es diseñar y construir un dispositivo híbrido inspirado en la caja de ritmos Roland TR-808 y en los controladores modulares de Yaeltex, implementado con dos microcontroladores Raspberry Pi Pico trabajando de manera conjunta.
+---
+
+## Descripción general del proyecto
+
+La idea de nuestro proyecto es diseñar y construir un dispositivo híbrido inspirado en la **caja de ritmos Roland TR-808** y en los **controladores modulares de Yaeltex**, implementado con **dos microcontroladores Raspberry Pi Pico** trabajando de manera conjunta (Pico W como *master* y Pico como *slave*).
+
 El sistema busca integrar las siguientes funcionalidades:
-•	Secuenciador rítmico: similar al de la TR-808, permitiendo programar patrones de percusión en pasos.
-•	Interfaz de control físico: con faders dedicados para cada canal, además de botones para control de patrones y activación de instrumentos.
-•	Sensores interactivos: se incorporará un sensor tipo theremin (por ultrasonido o capacitivo) para controlar parámetros expresivos en tiempo real.
-•	Módulo de efectos: implementación de efectos como delay y reverb, además de otros botones para control adicional (mute, solo, etc.).
-•	Compatibilidad con MIDI: el sistema enviará y recibirá datos MIDI (USB), permitiendo sincronización y control en software como Ableton Live.
-Para gestionar esta complejidad, se emplearán dos Raspberry Pi Pico, distribuyendo las funciones de la siguiente forma:
-•	Pico #1 (Master): encargado del motor principal del secuenciador, la generación de triggers, la comunicación MIDI y la salida de datos hacia Ableton.
-•	Pico #2 (Slave): dedicado a la lectura de controles físicos (faders, potenciómetros, botones) y sensores (theremin), enviando esta información en tiempo real al Pico W principal.
-La comunicación entre ambas se podrá realizar mediante protocolos como UART o I2C, garantizando una transferencia eficiente de datos.
-De esta manera, el sistema final se concibe como un instrumento modular, expandible y adaptable, combinando elementos clásicos de la síntesis rítmica con nuevas formas de interacción musical.
 
-3.	Describa brevemente cual es la motivación que los llevo a proponer la tematica de su proyecto de aula.
-La motivación para proponer este proyecto surge porque uno de los integrantes del equipo es productor musical y ha identificado la ausencia de sistemas de este tipo fabricados en Colombia. Medellín, reconocida como una de las ciudades con mayor crecimiento en la escena de la música electrónica en Latinoamérica, representa un entorno ideal para este desarrollo. Por eso, consideramos importante que un proyecto así se realice en la Universidad de Antioquia, uniendo la formación en ingeniería con la fuerza creativa de la industria musical local.
+- **Secuenciador rítmico**: similar al de la TR-808, permitiendo programar patrones de percusión por pasos.
+- **Interfaz de control físico**: faders dedicados para cada canal, potenciómetros, y botones para control de patrones y activación de instrumentos.
+- **Sensores interactivos**: uso de sensores tipo *theremin* (ultrasonido) para controlar parámetros expresivos en tiempo real.
+- **Módulo de control de efectos**: pensado para manejar parámetros como delay, reverb u otros efectos desde el hardware.
+- **Compatibilidad MIDI (USB)**: el sistema envía datos MIDI hacia software como Ableton Live, permitiendo sincronización, control de instrumentos virtuales y automatización de parámetros.
+
+Para gestionar la complejidad del sistema se utilizan dos MCUs con funciones distribuidas:
+
+- **Pico W (Master)**  
+  - Motor principal del secuenciador.  
+  - Generación de triggers.  
+  - Comunicación MIDI USB con el computador/DAW.  
+  - Manejo de la interfaz visual (anillo de LEDs y pantalla OLED).  
+
+- **Pico (Slave)**  
+  - Lectura de controles físicos: faders, potenciómetros y botones (arcade y normales).  
+  - Lectura de sensores (ultrasonido tipo theremin).  
+  - Envío de toda esta información al master en tiempo real mediante un enlace serie (UART).
+
+De esta manera, **Distrit CTRL01** se concibe como un instrumento **modular, expandible y adaptable**, que combina elementos clásicos de la síntesis rítmica con nuevas formas de interacción musical basadas en sensores.
+
+---
+
+## Motivación
+
+La motivación para proponer este proyecto surge porque uno de los integrantes del equipo es **productor musical** y ha identificado la ausencia de controladores de este tipo fabricados en Colombia. Medellín, reconocida como una de las ciudades con mayor crecimiento en la escena de la música electrónica en Latinoamérica, es un entorno ideal para explorar este tipo de desarrollos.
+
+Con **Distrit CTRL01** buscamos:
+
+- Unir la formación en **ingeniería electrónica** con la **industria musical local**.
+- Diseñar un dispositivo que pueda usarse en **performances en vivo** y procesos creativos reales.
+- Demostrar cómo los contenidos de Electrónica Digital III (MCU, comunicaciones, sensores y HMI) pueden materializarse en un **instrumento musical funcional**, diseñado desde la universidad.
