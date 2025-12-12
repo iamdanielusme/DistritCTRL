@@ -43,7 +43,10 @@ if (TARGET tinyusb_device)
         sh1106.c
         led_ring.c
         step_sequencer.c
-        
+        slave_link.c
+        ctrl_protocol.c
+        fader_driver.c
+        ultra_driver.c
     )
     
     # Para que encuentre tusb_config.h y headers locales
@@ -58,11 +61,12 @@ if (TARGET tinyusb_device)
         hardware_adc
         hardware_i2c
         hardware_pio
-        hardware_clocks 
+        hardware_clocks
+
     )
 
     # No necesitamos stdio por USB/UART en este proyecto
-    pico_enable_stdio_usb(distritctrl_master 0)
+    pico_enable_stdio_usb(distritctrl_master 1)
     pico_enable_stdio_uart(distritctrl_master 0)
 
     # create map/bin/hex/uf2 file etc.
