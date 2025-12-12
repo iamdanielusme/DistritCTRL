@@ -10,30 +10,83 @@ El proyecto final del curso consiste en desarrollar una aplicación o sistema em
 
 La idea de nuestro proyecto es diseñar y construir un dispositivo híbrido inspirado en la **caja de ritmos Roland TR-808** y en los **controladores modulares de Yaeltex**, implementado con **dos microcontroladores Raspberry Pi Pico** trabajando de manera conjunta (Pico W como *master* y Pico como *slave*).
 
-El sistema busca integrar las siguientes funcionalidades:
+## Arquitectura general
 
-- **Secuenciador rítmico**: similar al de la TR-808, permitiendo programar patrones de percusión por pasos.
-- **Interfaz de control físico**: faders dedicados para cada canal, potenciómetros, y botones para control de patrones y activación de instrumentos.
-- **Sensores interactivos**: uso de sensores tipo *theremin* (ultrasonido) para controlar parámetros expresivos en tiempo real.
-- **Módulo de control de efectos**: pensado para manejar parámetros como delay, reverb u otros efectos desde el hardware.
-- **Compatibilidad MIDI (USB)**: el sistema envía datos MIDI hacia software como Ableton Live, permitiendo sincronización, control de instrumentos virtuales y automatización de parámetros.
+El sistema se divide en dos placas:
 
-Para gestionar la complejidad del sistema se utilizan dos MCUs con funciones distribuidas:
+### Master (Pico W)
+- 3 **faders analógicos** en ADC internos (GP26, GP27, GP28).
+- 2 **sensores ultrasónicos HC-SR04** para controlar parámetros tipo theremin.
+- **Anillo de LEDs WS2812** controlado por PIO.
+- **Pantalla OLED SH1106** por I2C para mostrar:
+  - BPM detectado desde el clock MIDI.
+  - Estado de reproducción del secuenciador.
+  - Step actual y total de pasos.
+- **Módulo de step sequencer** que se sincroniza con el clock MIDI.
+- **Interfaz MIDI USB** (TinyUSB) hacia el computador/sintetizador.
 
-- **Pico W (Master)**  
-  - Motor principal del secuenciador.  
-  - Generación de triggers.  
-  - Comunicación MIDI USB con el computador/DAW.  
-  - Manejo de la interfaz visual (anillo de LEDs y pantalla OLED).  
-
-- **Pico (Slave)**  
-  - Lectura de controles físicos: faders, potenciómetros y botones (arcade y normales).  
-  - Lectura de sensores (ultrasonido tipo theremin).  
-  - Envío de toda esta información al master en tiempo real mediante un enlace serie (UART).
-
-De esta manera, **Distrit CTRL01** se concibe como un instrumento **modular, expandible y adaptable**, que combina elementos clásicos de la síntesis rítmica con nuevas formas de interacción musical basadas en sensores.
+### Slave (Pico)
+- 4 **botones arcade** (para notas o triggers rítmicos).
+- 4 **botones pulsadores** (funciones secundarias / notas adicionales).
+- 4 **potenciómetros** leídos a través de un **ADC externo ADS1115** por I2C.
+- Enlace **UART** hacia el master con un protocolo simple:
+  - Máscara de botones arcade.
+  - Máscara de botones normales.
+  - Valores analógicos de los 4 potenciómetros.
+- LED onboard usado como indicador de actividad y debug.
 
 ---
+
+## Software y módulos principales
+
+El proyecto está estructurado en varios módulos en C para mantener el diseño legible y reutilizable:
+
+- `midi_core`: inicializa TinyUSB y se encarga de enviar **Note On/Off** y **Control Change** al host.
+- `slave_link`: maneja la comunicación UART con el slave, parseando los frames y exponiendo el estado como una estructura `slave_state_t`.
+- `button_driver` (en el slave): lee botones con **antirrebote** y genera máscaras para arcade y normales.
+- `pot_driver` (en el slave): configura el **ADS1115** y actualiza periódicamente las lecturas de 4 canales analógicos.
+- Lógica en el master para **mapear**:
+  - Botones arcade → notas MIDI (ej. C4, C#4, D4, D#4).
+  - Botones normales → notas MIDI adicionales.
+  - Pots del slave → CC (ej. 20–23).
+  - Faders del master → CC (ej. 10–12).
+  - Sensores ultrasónicos → CC (ej. 30–31), usando un rango de distancias 10–80 cm.
+- `display_oled`: muestra BPM, estado de reproducción y step actual.
+- `led_ring`: actualiza el anillo de LEDs con información del step sequencer o estados del controlador.
+- `ultra_driver`: mide distancia con los HC-SR04 usando una máquina de estados no bloqueante.
+
+Todo el flujo se realiza de forma **no bloqueante**, coordinando:
+- `midi_core_task()` para la pila USB/MIDI.
+- `slave_link_task()` para actualizar el estado del slave.
+- `ultra_driver_update()` para avanzar las mediciones de los sensores.
+- Un timer periódico para refrescar la UI en la OLED.
+
+---
+
+## Uso esperado
+
+1. Conectar el **Pico W (master)** por USB al computador.
+2. Seleccionar el dispositivo MIDI generado por la Pico en el DAW (Ableton Live u otro).
+3. Mover faders, girar potenciómetros y acercar/alejar la mano a los sensores ultrasónicos para modular parámetros (volumen, filtros, efectos, etc.).
+4. Usar los botones arcade y normales para disparar notas, clips o funciones de transporte, dependiendo del mapeo en el DAW.
+5. Observar feedback visual en:
+   - Pantalla OLED (BPM, step, estado).
+   - Anillo de LEDs (pasos del secuenciador / estado del controlador).
+   - LED de debug para indicar actividad de botones.
+
+---
+
+## Estado actual del proyecto
+
+- ✅ Comunicación **master–slave** por UART estable.
+- ✅ Lectura de **botones** y mapeo a notas MIDI.
+- ✅ Lectura de **pots** del slave mediante ADS1115 y envío como CC.
+- ✅ Lectura de **3 faders** en el master (ADC interno) y envío como CC.
+- ✅ Lectura de **2 sensores ultrasónicos** y mapeo a CC tipo theremin.
+- ✅ Integración con **TinyUSB MIDI**, OLED y anillo de LEDs.
+- 🔧 Pendiente afinar algunos parámetros de filtrado, rangos y mapeos creativos según el uso musical final.
+
+Este repositorio recoge todo el código fuente, la lógica de comunicación y los módulos de hardware necesarios para que Distrit CTRL01 funcione como un controlador MIDI híbrido, expandible y orientado a performance en vivo.
 
 ## Motivación
 
